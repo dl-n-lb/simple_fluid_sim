@@ -1,9 +1,15 @@
 # Simple 2D fluid simulation
-on the gpu using sokol (TODO: add link)
+on the gpu using [sokol](https://github.com/floooh/sokol) 
+
+to build:
+``` console
+make debug  // for debug builds
+make release  // for release builds
+make wasm  // for web builds (release) (TODO!)
+```
 
 ## TODO
-- build fluid sim
-  - add advection, projection, etc.
+- build fluid sim 
   - fix boundary conditions
   - add post processing
 - add cross compilation to wasm
