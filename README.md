@@ -5,7 +5,7 @@ to build:
 ``` console
 make debug  // for debug builds
 make release  // for release builds
-make wasm  // for web builds (release) (TODO!)
+make wasm  // for web builds 
 ```
 
 ## TODO
