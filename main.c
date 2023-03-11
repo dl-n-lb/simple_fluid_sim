@@ -143,7 +143,7 @@ void frame(void) {
                 FACTOR * (input.m_x - input.pm_x) * input.clicked,
                 FACTOR * (input.pm_y - input.m_y) * input.clicked,
             },
-        .radius = 1500,
+        .radius = 500,
         .clicked = input.clicked,
         .force_position = {input.m_x, scr_h - input.m_y},
     };

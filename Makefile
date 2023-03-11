@@ -20,7 +20,7 @@ release: main.c shdc
 
 wasm: main.c shdc
 	$(EMCC) main.c -o build/wasm.html -DSOKOL_GLES3 $(CFLAGS) $(OPT_RELEASE) $(INCLUDE) $(LINKER_WASM)
-	rm -r wasm.html
+	rm -r build/wasm.html build/wasm.worker.js
 
 shdc: shader.glsl
 	$(SHDC) -i shader.glsl -o shader.glsl.h -l glsl330:glsl300es
