@@ -3,6 +3,9 @@
 #include "sokol_gfx.h"
 #include "sokol_glue.h"
 #include "sokol_log.h"
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#include "cimgui.h"
+#include "util/sokol_imgui.h"
 
 #include "shader.glsl.h"
 
@@ -21,6 +24,14 @@ static struct {
   int pm_x, pm_y;
   bool clicked;
 } input;
+
+static struct {
+  float k;
+  float dt;
+  float add_fluid_rad;
+  float force_multiplier;
+  float v3[3];
+} config;
 
 static struct {
   struct {
@@ -84,6 +95,8 @@ void init(void) {
       .logger.func = slog_func,
   });
 
+  simgui_setup(&(simgui_desc_t){});
+
   float fsq_verts[] = {-1.f, -3.f, 3.f, 1.f, -1.f, 1.f};
   state.render.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
       .data = SG_RANGE(fsq_verts),
@@ -106,6 +119,14 @@ void init(void) {
           },
   };
 
+  config.k = 0.2;
+  config.v3[0] = 0.5;
+  config.v3[1] = 0.5;
+  config.v3[2] = 0.1;
+  config.dt = 5;
+  config.force_multiplier = 0.5;
+  config.add_fluid_rad = 500;
+
   setup_fluid_passes();
 }
 
@@ -125,6 +146,24 @@ void frame(void) {
 #endif
     setup_fluid_passes();
   }
+  simgui_new_frame(&(simgui_frame_desc_t){
+      .width = sapp_width(),
+      .height = sapp_height(),
+      .delta_time = sapp_frame_duration(),
+      .dpi_scale = sapp_dpi_scale(),
+  });
+
+  bool display = true;
+  igSetNextWindowSize((ImVec2){scr_w, 200}, ImGuiCond_Always);
+  igSetNextWindowPos((ImVec2){0, 0}, ImGuiCond_Always, (ImVec2){0, 0});
+  igBegin("Settings", &display, ImGuiWindowFlags_NoResize);
+  igInputFloat("K", &config.k, 0.001, 0.1, "%.3f", ImGuiSliderFlags_None);
+  igInputFloat3("v3", &config.v3[0], "%.3f", ImGuiSliderFlags_None);
+  igSliderFloat("input radius", &config.add_fluid_rad, 1, 1000, "%.3f", ImGuiSliderFlags_None);
+  igSliderFloat("input force multiplier", &config.force_multiplier, 0, 5, "%.3f", ImGuiSliderFlags_None);
+  igSliderFloat("delta time multiplier", &config.dt, 0, 100, "%.3f", ImGuiSliderFlags_None);
+  igEnd();
+
   int c = sapp_frame_count() % 2;
   state.render.bind.fs_images[SLOT_fluid] = state.fluid[c].target;
   sg_begin_pass(state.fluid[c].pass, &state.fluid[c].pass_action);
@@ -133,17 +172,16 @@ void frame(void) {
     sg_apply_bindings(&state.fluid[c].bind);
     fluid_params_t fp = {
         .frame_cnt = sapp_frame_count(),
-        .K = 0.2,
-        .dt = sapp_frame_duration() * 5,
+        .K = config.k,
+        .dt = config.dt * sapp_frame_duration(),
         .resolution = {scr_w, scr_h},
-        .v = {0.05, 0.05},
-        .c_scale = 0.5,
+        .v3 = {config.v3[0], config.v3[1], config.v3[2]},
         .external_force =
             {
-                FACTOR * (input.m_x - input.pm_x) * input.clicked,
-                FACTOR * (input.pm_y - input.m_y) * input.clicked,
+                config.force_multiplier * (input.m_x - input.pm_x) * input.clicked,
+                config.force_multiplier * (input.pm_y - input.m_y) * input.clicked,
             },
-        .radius = 500,
+        .radius = config.add_fluid_rad,
         .clicked = input.clicked,
         .force_position = {input.m_x, scr_h - input.m_y},
     };
@@ -159,12 +197,15 @@ void frame(void) {
     draw_params_t dp = {.resolution = {scr_w, scr_h}};
     sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_draw_params, &SG_RANGE(dp));
     sg_draw(0, 3, 1);
+    simgui_render();
   }
   sg_end_pass();
   sg_commit();
 }
 
 void event(const sapp_event *event) {
+  if (simgui_handle_event(event))
+    return;
   switch (event->type) {
   case SAPP_EVENTTYPE_MOUSE_MOVE: {
     input.pm_x = input.m_x;
@@ -184,7 +225,10 @@ void event(const sapp_event *event) {
   }
 }
 
-void cleanup(void) { sg_shutdown(); }
+void cleanup(void) {
+  simgui_shutdown();
+  sg_shutdown();
+}
 
 sapp_desc sokol_main(int argc, char *argv[]) {
   (void)argc;

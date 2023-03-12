@@ -26,10 +26,9 @@ void main() {
 @fs fs_fluid
 uniform fluid_params {
     vec2 resolution;
-    vec2 v;
+    vec3 v3;
     vec2 external_force;
     vec2 force_position;
-    float c_scale;
     float K;
     float dt;
     float radius;
@@ -77,7 +76,7 @@ void main() {
 
     // viscosity
     // TODO: what is this vector?!?!?
-    curr.xyw += dt * vec3(0.5, 0.5, 0.1) * laplace.xyw;
+    curr.xyw += dt * v3 * laplace.xyw;
     // fix divergence
     // by adjusting the velocity to try and even out the pressure
     curr.xy -= K * vec2(dx.z, dy.z);
