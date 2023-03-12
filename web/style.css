@@ -1,0 +1,12 @@
+:root {
+    --page-border: 10%;
+}
+
+body {
+    font-family: Roboto;
+    margin: 0;
+}
+
+.h1 {
+    padding: 16px var(--page-border);
+}
