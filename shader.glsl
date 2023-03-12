@@ -32,6 +32,7 @@ uniform fluid_params {
     float K;
     float dt;
     float radius;
+    float decay_rate;
     int clicked;
     int frame_cnt;
  };
@@ -81,12 +82,12 @@ void main() {
     // by adjusting the velocity to try and even out the pressure
     curr.xy -= K * vec2(dx.z, dy.z);
     // external forces
-    // TODO: more elegant (using exp() instead of a branch!!)
     vec2 dist = force_position - gl_FragCoord.xy;
     curr.xyw += vec3(external_force, clicked) * exp(-dot(dist, dist)/radius);
 
     // dissipate ink
-    curr.w *= 0.999;
+    // TODO: is there a better way to decay??
+    curr.w *= decay_rate;
 
     // clamp velocities to ensure condition that dt < dx/u and dy/v
     // and clamp pressures to stop exploding

@@ -30,6 +30,7 @@ static struct {
   float dt;
   float add_fluid_rad;
   float force_multiplier;
+  float decay_rate;
   float v3[3];
 } config;
 
@@ -126,6 +127,7 @@ void init(void) {
   config.dt = 5;
   config.force_multiplier = 0.5;
   config.add_fluid_rad = 500;
+  config.decay_rate = 1;
 
   setup_fluid_passes();
 }
@@ -154,7 +156,7 @@ void frame(void) {
   });
 
   bool display = true;
-  igSetNextWindowSize((ImVec2){scr_w, 200}, ImGuiCond_Always);
+  igSetNextWindowSize((ImVec2){(scr_w > 500) ? 500 : scr_w, 200}, ImGuiCond_Always);
   igSetNextWindowPos((ImVec2){0, 0}, ImGuiCond_Always, (ImVec2){0, 0});
   igBegin("Settings", &display, ImGuiWindowFlags_NoResize);
   igInputFloat("K", &config.k, 0.001, 0.1, "%.3f", ImGuiSliderFlags_None);
@@ -162,6 +164,7 @@ void frame(void) {
   igSliderFloat("input radius", &config.add_fluid_rad, 1, 1000, "%.3f", ImGuiSliderFlags_None);
   igSliderFloat("input force multiplier", &config.force_multiplier, 0, 5, "%.3f", ImGuiSliderFlags_None);
   igSliderFloat("delta time multiplier", &config.dt, 0, 100, "%.3f", ImGuiSliderFlags_None);
+  igSliderFloat("decay rate", &config.decay_rate, 0.99, 1, "%.5f", ImGuiSliderFlags_None);
   igEnd();
 
   int c = sapp_frame_count() % 2;
@@ -182,6 +185,7 @@ void frame(void) {
                 config.force_multiplier * (input.pm_y - input.m_y) * input.clicked,
             },
         .radius = config.add_fluid_rad,
+        .decay_rate = config.decay_rate,
         .clicked = input.clicked,
         .force_position = {input.m_x, scr_h - input.m_y},
     };
