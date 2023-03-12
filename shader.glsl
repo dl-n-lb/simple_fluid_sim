@@ -23,9 +23,6 @@ void main() {
 }
 @end
 
-// TODO:
-// ADD INK SHADER PASS TO VISUALISE INK FLOWING THROUGH !!
-
 @fs fs_fluid
 uniform fluid_params {
     vec2 resolution;
@@ -90,7 +87,7 @@ void main() {
     curr.xyw += vec3(external_force, clicked) * exp(-dot(dist, dist)/radius);
 
     // dissipate ink
-    curr.w *= 0.995;
+    curr.w *= 0.999;
 
     // clamp velocities to ensure condition that dt < dx/u and dy/v
     // and clamp pressures to stop exploding
