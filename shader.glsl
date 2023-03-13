@@ -11,14 +11,19 @@ uniform draw_params {
     vec2 resolution;
 };
 
-uniform sampler2D fluid;
+uniform sampler2D ibnds;
+uniform sampler2D ifluid;
 
 out vec4 out_color;
 
 void main() {
-    vec4 fluid = texture(fluid, gl_FragCoord.xy / resolution);
+    vec4 fluid = texture(ifluid, gl_FragCoord.xy / resolution);
+    vec4 bnd = texture(ibnds, gl_FragCoord.xy / resolution);
 
-    out_color = vec4(gl_FragCoord.xy / resolution, 0.7, 1) * vec4(fluid.w);
+    out_color = vec4(gl_FragCoord.xy / resolution, 0.7, 1) * vec4(fluid.w / 5);
+    if (bnd.a > 0.0) {
+        out_color = vec4(0.8, 0.8, 0.8, 1);
+    }
     out_color.a = 1;
 }
 @end
@@ -39,12 +44,17 @@ uniform fluid_params {
 
 //      x           y          z       w
 // (velocity_x, velocity_y, pressure, ink)
+uniform sampler2D bnds;
 uniform sampler2D fluid;
 
 out vec4 out_color;
 
 vec4 fluidAt(vec2 coords) {
     return texture(fluid, coords / resolution);
+}
+
+bool bndsAt(vec2 coords) {
+    return texture(bnds, coords / resolution).x > 0;
 }
 
 void main() {
@@ -97,6 +107,21 @@ void main() {
     for (int i = 0; i < 4; ++i) { }
 
     out_color = curr;
+
+    // if a neighbor is a boundary set
+    // its velocities to negative to "repel" the fluid
+    if (bndsAt(gl_FragCoord.xy + vec2(1, 0)) || bndsAt(gl_FragCoord.xy - vec2(1, 0))) {
+        out_color.x = - out_color.x;
+    }
+    if (bndsAt(gl_FragCoord.xy + vec2(0, 1)) || bndsAt(gl_FragCoord.xy - vec2(0, 1))) {
+        out_color.y = - out_color.y;
+    }
+    /*
+    if (bndsAt(gl_FragCoord.xy)) {
+        // if its a boundary set its velocities to negative to "repel" the fluid
+        out_color.xy = vec2(-dx.x, -dy.y);//, 0, 0);
+        //out_color.w = 0;
+    }*/
 }
 @end
 
@@ -166,5 +191,27 @@ void main() {
 }
 @end
 
+@fs fs_bnds
+
+uniform bnds_params {
+    vec2 resolution;
+    int add;
+    vec2 add_pos;
+    float rad;
+};
+
+uniform sampler2D c_bnds;
+
+out vec4 fragColor;
+
+void main() {
+    fragColor = texture(c_bnds, gl_FragCoord.xy / resolution);
+    if (length(gl_FragCoord.xy - add_pos) < rad && add != 0) {
+        fragColor = add * vec4(1, 0, 0, 1);
+    }
+}
+@end
+
+@program bnds vs fs_bnds
 @program fluid vs fs_fluid
 @program draw vs fs_draw

@@ -23,6 +23,7 @@ static struct {
   int m_x, m_y;
   int pm_x, pm_y;
   bool clicked;
+  bool add_liquid;
 } input;
 
 static struct {
@@ -31,10 +32,19 @@ static struct {
   float add_fluid_rad;
   float force_multiplier;
   float decay_rate;
+  float add_bnds_rad;
   float v3[3];
 } config;
 
 static struct {
+  struct {
+    sg_image target;
+    sg_image dpth;
+    sg_pipeline pip;
+    sg_bindings bind;
+    sg_pass pass;
+    sg_pass_action pass_action;
+  } bnds[2];
   struct {
     sg_image target;
     sg_image dpth;
@@ -68,7 +78,29 @@ void setup_fluid_passes() {
     state.fluid[i].target = sg_make_image(&img_dsc);
     state.fluid[i].dpth = sg_make_image(&dpth_dsc);
   }
+
   for (int i = 0; i < 2; ++i) {
+    state.bnds[i].target = sg_make_image(&img_dsc);
+    state.bnds[i].dpth = sg_make_image(&dpth_dsc);
+
+    state.bnds[i].pass_action =
+        (sg_pass_action){.colors[0] = {.action = SG_ACTION_DONTCARE}};
+    state.bnds[i].pip = sg_make_pipeline(&(sg_pipeline_desc){
+        .layout = {.attrs[ATTR_vs_vertex_pos].format = SG_VERTEXFORMAT_FLOAT2},
+        .shader = sg_make_shader(bnds_shader_desc(sg_query_backend())),
+        .colors[0].pixel_format = SG_PIXELFORMAT_RGBA32F,
+        .depth.pixel_format = SG_PIXELFORMAT_DEPTH,
+    });
+    float fsq_verts[] = {-1.f, -3.f, 3.f, 1.f, -1.f, 1.f};
+    state.bnds[i].bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+        .data = SG_RANGE(fsq_verts),
+    });
+    state.bnds[i].pass = sg_make_pass(&(sg_pass_desc){
+        .color_attachments[0].image = state.bnds[i].target,
+        .depth_stencil_attachment.image = state.bnds[i].dpth,
+    });
+    state.bnds[i].bind.fs_images[SLOT_c_bnds] = state.bnds[i == 0].target;
+
     state.fluid[i].pass_action =
         (sg_pass_action){.colors[0] = {.action = SG_ACTION_DONTCARE}};
     state.fluid[i].pip = sg_make_pipeline(&(sg_pipeline_desc){
@@ -78,16 +110,18 @@ void setup_fluid_passes() {
         .depth.pixel_format = SG_PIXELFORMAT_DEPTH,
     });
 
-    float fsq_verts[] = {-1.f, -3.f, 3.f, 1.f, -1.f, 1.f};
     state.fluid[i].bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .data = SG_RANGE(fsq_verts),
     });
     state.fluid[i].bind.fs_images[SLOT_fluid] = state.fluid[i == 0].target;
+    state.fluid[i].bind.fs_images[SLOT_bnds] = state.bnds[i].target;
     state.fluid[i].pass = sg_make_pass(&(sg_pass_desc){
         .color_attachments[0].image = state.fluid[i].target,
         .depth_stencil_attachment.image = state.fluid[i].dpth,
     });
   }
+  state.bnds[0].bind.fs_images[SLOT_c_bnds] = state.bnds[1].target;
+  state.bnds[1].bind.fs_images[SLOT_c_bnds] = state.bnds[0].target;
 }
 
 void init(void) {
@@ -120,6 +154,9 @@ void init(void) {
           },
   };
 
+  setup_fluid_passes();
+
+
   config.k = 0.2;
   config.v3[0] = 0.5;
   config.v3[1] = 0.5;
@@ -127,9 +164,8 @@ void init(void) {
   config.dt = 5;
   config.force_multiplier = 0.5;
   config.add_fluid_rad = 500;
+  config.add_bnds_rad = 50;
   config.decay_rate = 1;
-
-  setup_fluid_passes();
 }
 
 void frame(void) {
@@ -148,6 +184,7 @@ void frame(void) {
 #endif
     setup_fluid_passes();
   }
+
   simgui_new_frame(&(simgui_frame_desc_t){
       .width = sapp_width(),
       .height = sapp_height(),
@@ -156,19 +193,43 @@ void frame(void) {
   });
 
   bool display = true;
-  igSetNextWindowSize((ImVec2){(scr_w > 500) ? 500 : scr_w, 200}, ImGuiCond_Always);
+  igSetNextWindowSize((ImVec2){(scr_w > 500) ? 500 : scr_w, 200},
+                      ImGuiCond_Always);
   igSetNextWindowPos((ImVec2){0, 0}, ImGuiCond_Always, (ImVec2){0, 0});
   igBegin("Settings", &display, ImGuiWindowFlags_NoResize);
   igInputFloat("K", &config.k, 0.001, 0.1, "%.3f", ImGuiSliderFlags_None);
   igInputFloat3("v3", &config.v3[0], "%.3f", ImGuiSliderFlags_None);
-  igSliderFloat("input radius", &config.add_fluid_rad, 1, 1000, "%.3f", ImGuiSliderFlags_None);
-  igSliderFloat("input force multiplier", &config.force_multiplier, 0, 5, "%.3f", ImGuiSliderFlags_None);
-  igSliderFloat("delta time multiplier", &config.dt, 0, 100, "%.3f", ImGuiSliderFlags_None);
-  igSliderFloat("decay rate", &config.decay_rate, 0.99, 1, "%.5f", ImGuiSliderFlags_None);
+  igSliderFloat("fluid input radius", &config.add_fluid_rad, 1, 2000, "%.1f",
+                ImGuiSliderFlags_None);
+  igSliderFloat("solid input radius", &config.add_bnds_rad, 1, 1000, "%.1f",
+                ImGuiSliderFlags_None);
+  igSliderFloat("input force multiplier", &config.force_multiplier, 0, 5,
+                "%.3f", ImGuiSliderFlags_None);
+  igSliderFloat("delta time multiplier", &config.dt, 0, 100, "%.3f",
+                ImGuiSliderFlags_None);
+  igSliderFloat("decay rate", &config.decay_rate, 0.99, 1, "%.5f",
+                ImGuiSliderFlags_None);
   igEnd();
 
   int c = sapp_frame_count() % 2;
-  state.render.bind.fs_images[SLOT_fluid] = state.fluid[c].target;
+  state.render.bind.fs_images[SLOT_ifluid] = state.fluid[c].target;
+  state.render.bind.fs_images[SLOT_ibnds] = state.bnds[c].target;
+
+  sg_begin_pass(state.bnds[c].pass, &state.bnds[c].pass_action);
+  {
+    sg_apply_pipeline(state.bnds[c].pip);
+    sg_apply_bindings(&state.bnds[c].bind);
+    bnds_params_t bp = {
+        .resolution = {scr_w, scr_h},
+        .add = input.clicked && !input.add_liquid,
+        .add_pos = {input.m_x, scr_h - input.m_y},
+        .rad = config.add_bnds_rad,
+    };
+    sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_bnds_params, &SG_RANGE(bp));
+    sg_draw(0, 3, 1);
+  }
+  sg_end_pass();
+
   sg_begin_pass(state.fluid[c].pass, &state.fluid[c].pass_action);
   {
     sg_apply_pipeline(state.fluid[c].pip);
@@ -181,19 +242,20 @@ void frame(void) {
         .v3 = {config.v3[0], config.v3[1], config.v3[2]},
         .external_force =
             {
-                config.force_multiplier * (input.m_x - input.pm_x) * input.clicked,
-                config.force_multiplier * (input.pm_y - input.m_y) * input.clicked,
+                config.force_multiplier * (input.m_x - input.pm_x) *
+                    input.clicked,
+                config.force_multiplier * (input.pm_y - input.m_y) *
+                    input.clicked,
             },
         .radius = config.add_fluid_rad,
         .decay_rate = config.decay_rate,
-        .clicked = input.clicked,
+        .clicked = input.clicked && input.add_liquid,
         .force_position = {input.m_x, scr_h - input.m_y},
     };
     sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_fluid_params, &SG_RANGE(fp));
     sg_draw(0, 3, 1);
   }
   sg_end_pass();
-
   sg_begin_default_pass(&state.render.pass_action, w, h);
   {
     sg_apply_pipeline(state.render.pip);
@@ -221,6 +283,10 @@ void event(const sapp_event *event) {
   case SAPP_EVENTTYPE_MOUSE_DOWN: {
     input.clicked = true;
     break;
+  }
+  case SAPP_EVENTTYPE_KEY_DOWN: {
+    if (event->key_code == SAPP_KEYCODE_SPACE)
+      input.add_liquid = !input.add_liquid;
   }
   default: {
     input.clicked = false;
