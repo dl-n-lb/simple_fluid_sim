@@ -101,7 +101,7 @@ void main() {
 
     // clamp velocities to ensure condition that dt < dx/u and dy/v
     // and clamp pressures to stop exploding
-    curr = clamp(curr, vec4(-5, -5, 0.5, 0), vec4(5, 5, 3, 5));
+    curr = clamp(curr, vec4(-5, -5, 0.5, 0), vec4(5, 5, 3, 10));
 
     // boundary conditions TODO
     for (int i = 0; i < 4; ++i) { }
@@ -110,12 +110,22 @@ void main() {
 
     // if a neighbor is a boundary set
     // its velocities to negative to "repel" the fluid
+    /*
+    vec2 dirs[4] = {vec2(1, 0), vec2(0, 1), vec2(-1, 0), vec2(0, -1)};
+    for (int i = 0; i < 4; ++i) {
+        if (bndsAt(gl_FragCoord.xy + dirs[i])) {
+            vec2 zero = vec2(1) - abs(dirs[i]);
+            out_color.xy *= zero;
+        }
+    }*/
+
     if (bndsAt(gl_FragCoord.xy + vec2(1, 0)) || bndsAt(gl_FragCoord.xy - vec2(1, 0))) {
         out_color.x = - out_color.x;
     }
     if (bndsAt(gl_FragCoord.xy + vec2(0, 1)) || bndsAt(gl_FragCoord.xy - vec2(0, 1))) {
         out_color.y = - out_color.y;
     }
+
     /*
     if (bndsAt(gl_FragCoord.xy)) {
         // if its a boundary set its velocities to negative to "repel" the fluid

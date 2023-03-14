@@ -156,7 +156,6 @@ void init(void) {
 
   setup_fluid_passes();
 
-
   config.k = 0.2;
   config.v3[0] = 0.5;
   config.v3[1] = 0.5;
@@ -278,16 +277,23 @@ void event(const sapp_event *event) {
     input.pm_y = input.m_y;
     input.m_x = (int)event->mouse_x;
     input.m_y = (int)event->mouse_y;
-    break;
   }
-  case SAPP_EVENTTYPE_MOUSE_DOWN: {
-    input.clicked = true;
-    break;
+  case SAPP_EVENTTYPE_TOUCHES_MOVED: {
+    input.pm_x = input.m_x;
+    input.pm_y = input.m_y;
+    input.m_x = event->touches[0].pos_x;
+    input.m_y = event->touches[0].pos_y;
   }
   case SAPP_EVENTTYPE_KEY_DOWN: {
     if (event->key_code == SAPP_KEYCODE_SPACE)
       input.add_liquid = !input.add_liquid;
   }
+  case SAPP_EVENTTYPE_MOUSE_DOWN:
+  case SAPP_EVENTTYPE_TOUCHES_BEGAN: {
+    input.clicked = true;
+    break;
+  }
+
   default: {
     input.clicked = false;
     break;
