@@ -11,8 +11,5 @@ make wasm  // for web builds
 ```
 
 ## TODO
-- build fluid sim 
-  - fix boundary conditions
-  - add post processing
-- add cross compilation to wasm
-- write js app
+ - FIXME: boundaries **DO NOT** behave correctly
+ - add post processing
