@@ -32,6 +32,7 @@ void main() {
 uniform fluid_params {
     vec2 resolution;
     vec3 v3;
+    vec2 wind;
     vec2 external_force;
     vec2 force_position;
     float K;
@@ -94,6 +95,7 @@ void main() {
     // external forces
     vec2 dist = force_position - gl_FragCoord.xy;
     curr.xyw += vec3(external_force, clicked) * exp(-dot(dist, dist)/radius);
+    curr.xy += wind;
 
     // dissipate ink
     // TODO: is there a better way to decay??

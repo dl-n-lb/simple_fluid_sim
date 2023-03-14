@@ -26,3 +26,6 @@ wasm: main.c shdc
 
 shdc: shader.glsl
 	$(SHDC) -i shader.glsl -o shader.glsl.h -l glsl330:glsl300es
+
+clean:
+	rm build/debug build/release build/wasm.wasm build/wasm.js

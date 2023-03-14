@@ -34,6 +34,7 @@ static struct {
   float decay_rate;
   float add_bnds_rad;
   float v3[3];
+  float wind_amt[2];
 } config;
 
 static struct {
@@ -198,6 +199,7 @@ void frame(void) {
   igBegin("Settings", &display, ImGuiWindowFlags_NoResize);
   igInputFloat("K", &config.k, 0.001, 0.1, "%.3f", ImGuiSliderFlags_None);
   igInputFloat3("v3", &config.v3[0], "%.3f", ImGuiSliderFlags_None);
+  igInputFloat2("wind", &config.wind_amt[0], "%.3f", ImGuiSliderFlags_None);
   igSliderFloat("fluid input radius", &config.add_fluid_rad, 1, 2000, "%.1f",
                 ImGuiSliderFlags_None);
   igSliderFloat("solid input radius", &config.add_bnds_rad, 1, 1000, "%.1f",
@@ -239,6 +241,7 @@ void frame(void) {
         .dt = config.dt * sapp_frame_duration(),
         .resolution = {scr_w, scr_h},
         .v3 = {config.v3[0], config.v3[1], config.v3[2]},
+        .wind = {config.wind_amt[0], config.wind_amt[1]},
         .external_force =
             {
                 config.force_multiplier * (input.m_x - input.pm_x) *
@@ -277,19 +280,23 @@ void event(const sapp_event *event) {
     input.pm_y = input.m_y;
     input.m_x = (int)event->mouse_x;
     input.m_y = (int)event->mouse_y;
+    break;
   }
+    /*
   case SAPP_EVENTTYPE_TOUCHES_MOVED: {
     input.pm_x = input.m_x;
     input.pm_y = input.m_y;
     input.m_x = event->touches[0].pos_x;
     input.m_y = event->touches[0].pos_y;
-  }
+    break;
+  }*/
   case SAPP_EVENTTYPE_KEY_DOWN: {
     if (event->key_code == SAPP_KEYCODE_SPACE)
       input.add_liquid = !input.add_liquid;
+    break;
   }
-  case SAPP_EVENTTYPE_MOUSE_DOWN:
-  case SAPP_EVENTTYPE_TOUCHES_BEGAN: {
+    case SAPP_EVENTTYPE_MOUSE_DOWN: {
+  //case SAPP_EVENTTYPE_TOUCHES_BEGAN: {
     input.clicked = true;
     break;
   }
