@@ -193,7 +193,7 @@ void frame(void) {
   });
 
   bool display = true;
-  igSetNextWindowSize((ImVec2){(scr_w > 500) ? 500 : scr_w, 200},
+  igSetNextWindowSize((ImVec2){(scr_w > 500) ? 500 : scr_w, 225},
                       ImGuiCond_Always);
   igSetNextWindowPos((ImVec2){0, 0}, ImGuiCond_Always, (ImVec2){0, 0});
   igBegin("Settings", &display, ImGuiWindowFlags_NoResize);
@@ -282,25 +282,27 @@ void event(const sapp_event *event) {
     input.m_y = (int)event->mouse_y;
     break;
   }
-    /*
+
   case SAPP_EVENTTYPE_TOUCHES_MOVED: {
     input.pm_x = input.m_x;
     input.pm_y = input.m_y;
     input.m_x = event->touches[0].pos_x;
     input.m_y = event->touches[0].pos_y;
     break;
-  }*/
+  }
   case SAPP_EVENTTYPE_KEY_DOWN: {
     if (event->key_code == SAPP_KEYCODE_SPACE)
       input.add_liquid = !input.add_liquid;
     break;
   }
     case SAPP_EVENTTYPE_MOUSE_DOWN: {
-  //case SAPP_EVENTTYPE_TOUCHES_BEGAN: {
     input.clicked = true;
     break;
   }
-
+  case SAPP_EVENTTYPE_TOUCHES_BEGAN: {
+    input.clicked = true;
+    break;
+  }
   default: {
     input.clicked = false;
     break;
